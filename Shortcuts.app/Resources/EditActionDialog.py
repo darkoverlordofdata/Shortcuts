@@ -1,6 +1,7 @@
 import os
 import sys
 import configparser
+from types import SimpleNamespace
 from ShortcutModel import ShortcutModel
 from QtSingleApplication import QtSingleApplication
 
@@ -33,34 +34,56 @@ class QHLine(QFrame):
 
 
 class EditActionDialog(QDialog):
-    def __init__(self):
+    def __init__(self, data):
         super().__init__()
 
         self.setWindowTitle("Edit Action")
         self.setFixedWidth(400)
         self.setFixedHeight(286)
+        self.data = {}
 
         QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
 
         self.buttonBox = QDialogButtonBox(QBtn)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
+        self.buttonBox.accepted.connect(self.acceptAction)
+        self.buttonBox.rejected.connect(self.rejectAction)
 
         self.layout = QVBoxLayout()
 
         formLayout = QFormLayout()
-        shortcutLineEdit = QLineEdit(maximumWidth=80)
-        descLineEdit = QLineEdit()
-        enabledCheckBox = QCheckBox(text="Enabled")
-        commandTextEdit = QPlainTextEdit()
+        self.shortcutLineEdit = QLineEdit(maximumWidth=80)
+        self.shortcutLineEdit.setText(data.shortcut)
+        self.descLineEdit = QLineEdit()
+        self.descLineEdit.setText(data.description)
+        self.enabledCheckBox = QCheckBox(text="Enabled")
+        print(f'data.enabled = {data.enabled}')
+        if data.shortcut == 'none':
+            self.enabledCheckBox.setChecked(False)
+        else:
+            self.enabledCheckBox.setChecked(True)
+        self.commandTextEdit = QPlainTextEdit()
+        self.commandTextEdit.setPlainText(data.command)
 
-        formLayout.addRow("Shortcut", shortcutLineEdit)
-        formLayout.addRow("Description", descLineEdit)
-        formLayout.addRow("",  enabledCheckBox)
+        formLayout.addRow("Shortcut", self.shortcutLineEdit)
+        formLayout.addRow("Description", self.descLineEdit)
+        formLayout.addRow("",  self.enabledCheckBox)
         formLayout.addWidget( QHLine())
-        formLayout.addRow("Command", commandTextEdit)
+        formLayout.addRow("Command", self.commandTextEdit)
 
         self.layout.addLayout(formLayout)
 
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
+
+
+    def rejectAction(self):
+        self.data = SimpleNamespace(shortcut='', description='', enabled=False, command='')
+        self.reject()
+
+    def acceptAction(self):
+        self.data = SimpleNamespace(
+            shortcut=self.shortcutLineEdit.text(), 
+            description=self.descLineEdit.text(), 
+            enabled=self.enabledCheckBox.isChecked(), 
+            command=self.commandTextEdit.toPlainText())
+        self.accept()

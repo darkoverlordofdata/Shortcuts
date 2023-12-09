@@ -1,6 +1,7 @@
 import os
 import sys
 import configparser
+from types import SimpleNamespace
 from ShortcutModel import ShortcutModel
 from QtSingleApplication import QtSingleApplication
 from EditActionDialog import EditActionDialog
@@ -25,17 +26,58 @@ from PyQt5.QtWidgets import (
 class MainWindow(QMainWindow):
 
     def addButton_onclick(self):
-        pass
+        self.data = SimpleNamespace(shortcut='', description='', enabled=False, command='')
+        dlg = EditActionDialog(self.data)
+        if dlg.exec():
+            
+            print('==========================')
+            print(f'shortcut: {dlg.data.shortcut}')
+            print(f'description: {dlg.data.description}')
+            print(f'enabled: {dlg.data.enabled}')
+            print(f'command: {dlg.data.command}')
+            print('==========================')
+
+        else:
+            print('==========================')
+            print('cancelled')
+            print('==========================')
 
     def removeButton_onclick(self):
         pass
 
     def modifyButton_onclick(self):
-        dlg = EditActionDialog()
-        s = dlg.exec()
+        if self.id == -1:
+            print('none selected')
+        else:
+            data = SimpleNamespace(
+                shortcut=self.data[self.id][1], 
+                description=self.data[self.id][2], 
+                enabled=self.data[self.id][3], 
+                command=self.data[self.id][4])
+
+            dlg = EditActionDialog(data)
+            if dlg.exec():
+                print('==========================')
+                print(f'shortcut: {dlg.data.shortcut}')
+                print(f'description: {dlg.data.description}')
+                print(f'enabled: {dlg.data.enabled}')
+                print(f'command: {dlg.data.command}')
+                print('==========================')
+
+            else:
+                print('==========================')
+                print('cancelled')
+                print('==========================')
 
     def closeButton_onclick(self):
         self.close()
+
+    def table_onclick(self):
+        index = self.table.selectedIndexes()[0]
+        self.id = int(self.table.model().data(index))
+        print("id    : " + str(self.id)) 
+        print(self.data[self.id])
+
 
     def __init__(self):
         super().__init__()
@@ -50,7 +92,8 @@ class MainWindow(QMainWindow):
         config.read(f'{os.environ["HOME"]}/.config/kglobalshortcutsrc')
 
         sections = config.sections()
-        data = []
+        self.data = []
+        self.id = -1
         id = 0
 
         for type in sections:
@@ -59,15 +102,17 @@ class MainWindow(QMainWindow):
                 if len(row) >= 3:
                     shortcut = row[0]
                     description = row[2]
-                    data.append([id, shortcut, description, type, info])
+                    self.data.append([id, shortcut, description, type, info])
                     id = id+1
                 
-        table = QTableView(minimumHeight=300)
-        model = ShortcutModel(data, ["ID", "Shortcut", "Description", "Type", "Info"])
-        table.setModel(model)
-        table.setModel(model)        
+        self.table = QTableView(minimumHeight=300)
+        self.table.setSelectionBehavior(QTableView.SelectRows)
+        self.table.setSelectionMode(QTableView.SingleSelection)
+        model = ShortcutModel(self.data, ["ID", "Shortcut", "Description", "Type", "Info"])
+        self.table.setModel(model)
+        self.table.clicked.connect(self.table_onclick)
 
-        header = table.horizontalHeader()    
+        header = self.table.horizontalHeader()    
     
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
@@ -98,7 +143,7 @@ class MainWindow(QMainWindow):
         searchFor = QLineEdit()
         searchFor.setPlaceholderText("Search")
         topLeftLayout.addWidget(searchFor)
-        topLeftLayout.addWidget(table)
+        topLeftLayout.addWidget(self.table)
 
         topRightLayout.addWidget(addButton)
         topRightLayout.addWidget(removeButton)
